@@ -34,7 +34,7 @@ export interface MangaDetail {
   rating: number;
   views: number;
   follows: number;
-  chapters: Chapter[]; // <--- sửa từ string sang Chapter[]
+  chapters: Chapter[];
   tags?: string[];
 }
 
@@ -58,8 +58,10 @@ export enum MangaStatus {
   ONGOING = 'ongoing',
   COMPLETED = 'completed',
   HIATUS = 'hiatus',
-  CANCELLED = 'cancelled'
+  CANCELLED = 'cancelled',
+  UNKNOWN = 'unknown'
 }
+
 
 export interface Comment {
   id: string;

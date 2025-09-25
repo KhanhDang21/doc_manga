@@ -4,80 +4,129 @@ import { HeroSection } from '@/components/home/HeroSection';
 import { MangaGrid } from '@/components/manga/MangaGrid';
 import { TopMangaTabs } from '@/components/home/TopMangaTabs';
 import { GenreSection } from '@/components/home/GenreSection';
-import { mockMangaData, mockGenres, mockTopManga } from '@/data/mockData';
+import { mockGenres } from '@/data/mockData';
 
 import { useEffect, useState } from 'react';
 import { fetchHomeManga } from '@/services/api';
-import { Manga } from '@/types/manga';
+import { Genre, Manga } from '@/types/manga';
 
 export default function Home() {
   const [suggestHomeManga, setSuggestHomeManga] = useState<Manga[]>([]);
   const [heroHomeManga, setHeroHomeManga] = useState<Manga[]>([]);
 
-  const OG_IMAGE = "https://img.otruyenapi.com/uploads/comics/";
-
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await fetchHomeManga();
+        const items = response.data || [];
 
-        // giả sử response.data.data.items là mảng truyện
-        const items = response?.data?.items || [];
+        // Lấy tất cả cover_art ids từ relationships
+        const coverIds: string[] = [];
+        items.forEach((item: any) => {
+          item.relationships?.forEach((rel: any) => {
+            if (rel.type === 'cover_art') {
+              coverIds.push(rel.id);
+            }
+          });
+        });
 
-        const mappedManga: Manga[] = items.map((item: any) => ({
-          id: item.id,
-          slug: item.slug,
-          title: item.name,
-          status: item.status,
-          coverImage: OG_IMAGE + item.thumb_url, // nhớ fix đường dẫn nếu cần
-          genres: item.category?.map((c: any) => ({ id: c.id, name: c.name })) || [],
-          chapters: item.chaptersLatest[0].chapter_name,
-          views: item.views || 0,
-          rating: item.rating || 0,
-        }));
+        // Lấy dữ liệu cover art từ API
+        const coverResponse = await fetch(
+          `https://api.mangadex.org/cover?limit=100&ids[]=${coverIds.join('&ids[]=')}`
+        );
+        const coverData = await coverResponse.json();
+
+        // Map cover id -> URL
+        const coverMap: Record<string, string> = {};
+        coverData.data.forEach((c: any) => {
+          coverMap[c.id] = `https://uploads.mangadex.org/covers/${c.relationships.find((r: any) => r.type === 'manga')?.id}/${c.attributes.fileName}`;
+        });
+
+        // Map manga với cover image
+        const mappedManga: Manga[] = items.map((item: any) => {
+          const coverRel = item.relationships.find((r: any) => r.type === 'cover_art');
+          const coverImage = coverRel ? coverMap[coverRel.id] : '';
+        
+        // Tag
+        const genres: Genre[] = (item.attributes?.tags || [])
+          .filter((t: any) => t.attributes?.group === "genre")
+          .map((t: any) => ({
+            id: t.id,
+            name: t.attributes?.name?.en || "Unknown",
+            slug: t.id,
+          }));
+
+        const tags: string[] = (item.attributes?.tags || [])
+          .map((t: any) => t.attributes?.name?.en?.trim() || "")
+          .filter((name: string) => name.length > 0);  
+
+          return {
+            id: item.id,
+            slug: item.attributes.slug || item.id,
+            title:
+              item.attributes.altTitles?.find((t: any) => t.vi)?.vi ||
+              item.attributes.altTitles?.find((t: any) => t.en)?.en ||
+              item.attributes.altTitles?.find((t: any) => t.ja)?.ja ||
+              'Unknown',
+            status: item.attributes.status === 'completed' ? 'completed' : 'ongoing',
+            coverImage,
+            genres,
+            tags,
+            chapters: item.attributes.lastChapter || '...',
+            views: item.attributes.views || 19900,
+            rating: item.attributes.rating || 4.8,
+          };
+        });
 
         setSuggestHomeManga(mappedManga);
-
-        setHeroHomeManga(mappedManga.slice(0, 3));
+        setHeroHomeManga(mappedManga.slice(0, 5));
       } catch (error) {
-        console.error("Error fetching home manga:", error);
+        console.error('Error fetching home manga:', error);
       }
     };
+
     fetchData();
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      
-      <main className="flex-1">
-        <div className="container px-4 py-8 space-y-12">
-          {/* Hero Section */}
-          <HeroSection featuredManga={heroHomeManga} />
-          
-          {/* Recommended Manga */}
-          <MangaGrid 
-            manga={suggestHomeManga}
-            title="Đề Xuất Cho Bạn"
-          />
-          
-          {/* Top Manga Tabs */}
-          <TopMangaTabs 
-            topManga={{ weekly: suggestHomeManga.slice(0, 6), monthly: suggestHomeManga.slice(6, 12), yearly: suggestHomeManga.slice(12, 18) }} 
-          />
-          
-          {/* Latest Updates */}
-          <MangaGrid 
-            manga={suggestHomeManga.slice(0, 6)} 
-            title="Mới Cập Nhật"
-          />
-          
-          {/* Genre Section */}
-          <GenreSection genres={mockGenres} />
+  <div className="min-h-screen flex flex-col">
+    <Header />
+
+    <main className="flex-1">
+      <div className="container px-4 py-8 space-y-12">
+        {/* Hero Section */}
+        <HeroSection featuredManga={heroHomeManga} />
+
+        {/* Đề Xuất riêng full width */}
+        <MangaGrid manga={suggestHomeManga.slice(0, 6)} title="Đề Xuất Cho Bạn" />
+
+        {/* Layout 2 cột */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Bên trái: Mới cập nhật */}
+          <div className="lg:col-span-2">
+            <MangaGrid manga={suggestHomeManga} title="Mới Cập Nhật" variant="large" />
+          </div>
+
+          {/* Bên phải: Xếp hạng theo tabs */}
+          <div className="lg:col-span-1">
+            <TopMangaTabs
+              topManga={{
+                weekly: suggestHomeManga.slice(0, 5),
+                monthly: suggestHomeManga.slice(5, 10),
+                yearly: suggestHomeManga.slice(10, 14),
+              }}
+            />
+          </div>
         </div>
-      </main>
-      
-      <Footer />
-    </div>
-  );
+
+        {/* Genre Section */}
+        <GenreSection genres={mockGenres} />
+      </div>
+    </main>
+
+    <Footer />
+  </div>
+);
+
+
 }

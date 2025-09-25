@@ -79,7 +79,7 @@ export function Footer() {
         </div>
 
         <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
-          <p>&copy; 2024 MangaMin. All rights reserved.</p>
+          <p>&copy; 2024 Độc Manga. All rights reserved.</p>
         </div>
       </div>
     </footer>

@@ -4,7 +4,7 @@ import { MangaCard } from './MangaCard';
 interface MangaGridProps {
   manga: Manga[];
   title?: string;
-  variant?: 'default' | 'compact';
+  variant?: 'default' | 'compact' | 'large';
 }
 
 export function MangaGrid({ manga, title, variant = 'default' }: MangaGridProps) {
@@ -20,13 +20,20 @@ export function MangaGrid({ manga, title, variant = 'default' }: MangaGridProps)
             <MangaCard key={item.id} manga={item} variant={variant} />
           ))}
         </div>
+      ) : variant === 'large' ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {manga.map((item) => (
+            <MangaCard key={item.id} manga={item} variant={variant} />
+          ))}
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 gap-2">
           {manga.map((item) => (
             <MangaCard key={item.id} manga={item} variant={variant} />
           ))}
         </div>
       )}
+
     </section>
   );
 }

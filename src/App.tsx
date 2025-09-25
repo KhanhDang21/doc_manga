@@ -18,8 +18,8 @@
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/manga/:slug" element={<MangaDetail />} />
-            <Route path="/read/:manga_slug/:chapter_number" element={<ChapterReader />} />
+            <Route path="/manga/:id" element={<MangaDetail />} />
+            <Route path="/manga/:manga_title/:chapter_id" element={<ChapterReader />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
